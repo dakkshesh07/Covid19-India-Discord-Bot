@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord.ext.commands import CommandNotFound
 import requests
 import json
 import pandas as pd
@@ -12,6 +13,12 @@ TOKEN = '' # your bot token here
 
 mylist = ["Maharashtra", "Kerala", "Karnataka", "Andhra Pradesh", "Tamil Nadu", "Delhi", "Uttar Pradesh", "West Bengal", "Odisha", "Rajasthan", "Chhattisgarh", "Telangana", "Haryana", "Gujarat", "Bihar", "Madhya Pradesh", "Assam", "Punjab", "Jammu And Kashmir", "Jharkhand", "Uttarakhand", "Himachal Pradesh", "Goa", "Puducherry", "Tripura", "Manipur", "Chandigarh", "Arunachal Pradesh", "Meghalaya", "Nagaland", "Ladakh", "Sikkim", "Andaman And Nicobar Islands", "Mizoram", "Dadra And Nagar Haveli And Daman And Diu", "Lakshadweep", "Total"]
 
+def log(info):
+    t = datetime.datetime.now()
+    print("log : " + str(t) + " : " + info)
+
+sep = ("-" * 70)
+
 BOT = commands.Bot(command_prefix = '$', help_command=None) # ucan replace the command prefix with what ever u want
 
 if os.path.exists("graph.png"):
@@ -19,14 +26,14 @@ if os.path.exists("graph.png"):
 
 @BOT.event
 async def on_ready():
-    print('logged on, ready to accpect commands')
+    log("logged on, ready to accpect commands")
+    print(sep)
 
 #u cant also change the commands
 @BOT.command(name="covid-info")
 async def corona(ctx):
     #log
-    t = datetime.datetime.now()
-    print("log " + str(t) + " :" + " data fetch requested")
+    log("data fetch requested")
 
     #setting url variable
     url = r'https://api.covid19india.org/csv/latest/state_wise.csv'
@@ -34,8 +41,9 @@ async def corona(ctx):
     #reading the url for covid data to a pandas dataframe
     df = pd.read_csv(url)
 
-    t = datetime.datetime.now()
-    print("log " + str(t) + " :" + " cleaning")    
+    #log
+    log("cleaning the data")
+
     #dropping all uneeded data(cleaning the dataframe)
     df_clean = df.drop(columns=['Last_Updated_Time', 'Migrated_Other', 'State_code', 'State_Notes', 'Delta_Deaths', 'Delta_Recovered', 'Delta_Confirmed'])
 
@@ -43,8 +51,8 @@ async def corona(ctx):
 
     await ctx.reply("Please Enter Your State")
 
-    t = datetime.datetime.now()
-    print("log " + str(t) + " :" + " taking input from user")
+    #log
+    log("taking input from user")
 
     #taking user input for state
     def check(msg):
@@ -62,13 +70,16 @@ async def corona(ctx):
             break
 
     if id == "no":
-        t = datetime.datetime.now()
-        print("log " + str(t) + " :" + " invalid input recived")
+        #log
+        log("invalid input recived from the user")
+        print(sep)
+        #Reply the user with a error message
         await ctx.reply("Invalid input, please use '$list-states' to check available inputs")
         return
 
-    t = datetime.datetime.now()
-    print("log " + str(t) + " :" + " input recived, proceeding")
+    #log
+    log("input recived, proceeding")
+    #selecting particular State's data which was requested by the user
     df1 = df_clean[df_clean['State'] == state]
 
     confirmed = df1.iloc[0]['Confirmed']
@@ -90,18 +101,20 @@ async def corona(ctx):
     msg.content = msg.content.title()
 
     if (msg.content) == "Text":
+        #log
+        log("Text format choosen, genrating text message")
         embedVar = discord.Embed(title="Covid19 Info For " + state, description="", color=discord.Colour.red())
         embedVar.add_field(name="Confirmed", value=confirmed, inline=False)
         embedVar.add_field(name="Recovered", value=recovered, inline=False)
         embedVar.add_field(name="Deaths", value=deaths, inline=False)
         embedVar.add_field(name="Active", value=active, inline=False)
         await ctx.reply(embed=embedVar)
-        t = datetime.datetime.now()
-        print("log " + str(t) + " :" + " Final reply sent!")
+        #log
+        log("Final reply sent!")
+        print(sep)
 
     elif (msg.content) == "Graph":
-        t = datetime.datetime.now()
-        print("log " + str(t) + " :" + " genrating graph")
+        log("genrating graph")
         for index, value in enumerate(values):
 
             plt.text(value, index, str(value))
@@ -121,10 +134,13 @@ async def corona(ctx):
         await ctx.reply(file=discord.File('graph.png'))
 
         os.remove("graph.png")
-        t = datetime.datetime.now()
-        print("log " + str(t) + " :" + " Final reply sent!")
+        #log
+        log("Final reply sent!")
+        print(sep)
 
     else:
+        log("Invalid format input recived, end request")
+        print(sep)
         await ctx.reply("Please type a valid option, start again")
         return
 
@@ -153,6 +169,14 @@ async def author(ctx):
     embedVar3.title = "This bot was made by: "
     embedVar3.description = 'Dakkshesh'
     await ctx.reply(embed=embedVar3)
+
+@BOT.event
+async def on_command_error(ctx, error):
+    if isinstance(error, CommandNotFound):
+        log("Unknown command by user, ignoring")
+        print(sep)
+        return
+    raise error
 
 BOT.run(TOKEN)
 
